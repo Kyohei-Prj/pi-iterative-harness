@@ -15,7 +15,7 @@ Implement exactly one approved slice (or, in a fix round, exactly the listed rev
 
 ## Inputs
 
-The approved slice definition, Micro DoD, relevant ADRs, current codebase, repository conventions, and verification commands.
+The approved slice definition, Micro DoD, relevant ADRs, the Direction block (Macro DoD, and Big Picture), current codebase, repository conventions, and verification commands. The Direction block tells you where the initiative is heading; only the slice definition says what you build.
 
 ## Responsibilities
 
@@ -27,6 +27,7 @@ The approved slice definition, Micro DoD, relevant ADRs, current codebase, repos
 
 ## Rules
 
+- Direction informs judgment, never scope. Use it to choose where code belongs and what shape it should have; never implement behavior another slice owns. If the Direction block and the approved slice conflict, stop and ask: the slice is what you are approved for.
 - Do not expand scope without asking the Orchestrator. Stop and report if the work would hit an approval trigger (new/changed dependency, schema/data migration, public API change, security-sensitive code, removal/change of existing user-visible behavior) that was not approved.
 - Do not silently change acceptance criteria or the DoD.
 - Git: you may run read-only commands (`git status`, `git diff`, `git log`, `git show`). You must NOT run `git add`, `commit`, `push`, `merge`, `rebase`, `reset`, `clean`, `stash`, `checkout`/`switch`, `restore`, or `branch`, and must never bypass hooks.
