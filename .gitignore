@@ -1,0 +1,34 @@
+# --- Secrets: never commit credentials from the agent directory ---
+agent/auth.json
+agent/mcp-auth.json
+
+# --- Runtime state, caches and installs: reproducible, large, machine-specific ---
+agent/sessions/
+agent/install/
+agent/npm/
+agent/bin/
+agent/tmp/
+agent/missions/
+agent/agent-memory/
+agent/web-search-cache/
+agent/pi-subagents/
+agent/pi-web-access/
+agent/trust.json
+agent/**/last-seen-version.json
+agent/**/.cache/
+
+# Machine-specific model endpoints and the local model this machine runs on.
+# Not part of the AIDD workflow; keep it out of this repo unless the config itself changes.
+agent/models-store.json
+
+# --- AIDD local state: the temporary initiative record and its archives ---
+.aidd/WORK.md
+.aidd/archive/
+
+# --- MCP tool local state and output (Serena cache/memories, Playwright artifacts) ---
+.serena/
+.playwright-mcp/
+
+# --- OS / editor noise ---
+.DS_Store
+*.swp
