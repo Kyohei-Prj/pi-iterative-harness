@@ -49,7 +49,9 @@ A failed or blocked verification is not a completed slice and must not be commit
 
 ## Integrity check
 
-Record `HEAD` and the current branch before each implementer run and confirm they are unchanged afterwards. Consider enabling the package's scope monitoring/tool-permission features if your installed `pi-subagents` version provides them.
+Record `HEAD`, the current branch, and `git write-tree` before each implementer run and confirm all three are unchanged afterwards: a moved index tree means the implementer staged something. To find which paths, run `git diff --cached --name-only <recorded-tree>` against the tree hash recorded before the run — it lists exactly what the implementer moved into the index — then unstage only those explicit paths with `git restore --staged -- <paths>` and report it. Where a path was already staged before the run, restore it from the recorded tree instead (`git restore --source=<recorded-tree> --staged -- <paths>`), or the pre-run entry is lost. Never unstage the whole index or a wildcard: during a review-fix round the index legitimately holds the Orchestrator's own staging from steps 3-4 above.
+
+The tool allowlist and these rules are prompt boundaries, not enforcement; the hash check is what detects a violation. `pi-subagents` can gate a child's `write`/`edit` with `permission:` frontmatter, but bash rules are rejected by design, so no rule there can block a Git command.
 
 ## Push, merge, and cleanup
 

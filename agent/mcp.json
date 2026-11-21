@@ -4,7 +4,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/oraios/serena",
+        "git+https://github.com/oraios/serena@be609b625740846dc2750cc13291966cf1216b00",
         "serena",
         "start-mcp-server",
         "--context",
@@ -29,7 +29,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@playwright/mcp@latest",
+        "@playwright/mcp@0.0.86",
         "--headless"
       ]
     }

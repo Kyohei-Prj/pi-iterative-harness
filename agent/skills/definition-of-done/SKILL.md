@@ -16,7 +16,20 @@ For each slice specify:
 - relevant unit, integration, and end-to-end scenarios (Playwright scenarios for browser-observable behavior);
 - required build, lint, type-check, and regression checks, with exact commands;
 - any security, data migration, compatibility, or documentation checks that apply;
+- for browser-observable behavior, the evidence to be shown, not asserted: the Playwright run output, a screenshot of each state that matters, and the browser console errors;
 - the evidence expected for each criterion.
+
+## Bug fixes
+
+Fix a reproduced failure in this order:
+
+- reproduce it and write a regression test that fails for the expected reason;
+- implement the fix, then confirm that test passes and the surrounding suite still passes;
+- record the failing run and the passing run as the evidence for the criterion.
+
+A changed or removed assertion in an existing test needs a stated reason for the new expected behavior.
+
+Where the repository has no test runner, the failing-then-passing evidence is a failing gate probe (a check that exits nonzero for the expected reason before the fix, and 0 after) or a reproducible command — never a new test framework introduced to satisfy this rule.
 
 ## Gate rules
 

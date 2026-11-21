@@ -12,8 +12,8 @@ machine — no per-project setup, no credentials, no installs, no chat history.
 |---|---|
 | `agent/` | Mirror of the live Pi agent directory — see the table below |
 | `AGENTS.md` | Instructions Pi reads while working in *this* repo: code rules, rules for the mirrored files, git discipline, how to verify |
-| `scripts/sync.sh` | `pull` / `push` between `agent/` and the live agent directory |
-| `scripts/verify-config.sh` | Model-free static checks on the mirror: valid JSON, every skill an agent references exists, no secrets, no drifted names |
+| `scripts/sync.sh` | `status` (drift report) / `pull` / `push` between `agent/` and the live agent directory |
+| `scripts/verify-config.sh` | Model-free static checks on the mirror: valid JSON, every package and MCP version pinned, each `aidd-*` role named by the workflow skill or a prompt template resolves to an agent or skill and every defined `aidd-*` subagent is one the workflow delegates to (a non-prefixed skill is checked only where an agent's frontmatter names it), read-only roles hold no write tool, no secrets, no drifted names |
 | `.aidd/adr/` | Accepted ADRs about this configuration |
 | `.aidd/WORK.md`, `.aidd/archive/` | Temporary initiative record and its archives — Git-ignored |
 
@@ -25,7 +25,7 @@ see a change take effect.
 
 | Path | Pi's role | In this repo |
 |---|---|---|
-| `agent/settings.json` | Pi package declarations (`npm:pi-subagents`, `npm:pi-web-access`) | yes |
+| `agent/settings.json` | Pi package declarations, pinned to exact versions (`npm:pi-subagents@0.84.0`, `npm:pi-web-access@0.46.0`) | yes |
 | `agent/mcp.json` | MCP servers available in every project (serena, context7, deepwiki, playwright) | yes |
 | `agent/agents/` | Custom subagent definitions | yes — the five `aidd-*` roles |
 | `agent/skills/` | Skills, each a directory with a `SKILL.md` | yes — the five AIDD skills |
@@ -42,21 +42,60 @@ after a pull; it is ignored here because the local model belongs to the machine,
 ## Syncing
 
 ```sh
+scripts/sync.sh status  # report every managed path where ./agent and the live directory differ
 scripts/sync.sh pull    # live agent directory -> ./agent   (run before committing changes)
 scripts/sync.sh push    # ./agent -> live agent directory   (run after cloning elsewhere)
 ```
 
 Both directions copy an explicit whitelist of files and directories, so nothing outside the table
-above moves in either direction. `push` copies any file it overwrites into a temporary directory and
+above moves in either direction. The directions are not symmetric: `pull` replaces each managed path
+under `agent/` wholesale, so anything authored in the mirror and not yet pushed is destroyed without a
+backup — commit the mirror, or `push` first. `push` only overwrites files it replaces, and keeps a
+backup of each. `push` copies any file it overwrites into a temporary directory and
 prints the path, and `PI_CODING_AGENT_DIR` overrides the source/target location. Run `/reload` in Pi
 (or restart it) after `push`.
+
+`status` exits 1 when anything differs and prints the `diff -qr` detail per managed path, so it is
+runnable as a check before you decide which direction to sync. It reports, and never resolves,
+two kinds of drift: a resource you deleted from this repo that is still live (`Only in ...: old.md`),
+and a resource another repo installed in the live directory. Neither is removed by `push`, which
+merges so it cannot destroy what it does not own — delete those paths by hand once `status` has told
+you they are yours to remove. The test for "yours": a drifting path is yours to delete only when this
+repo declares it — listed by `git ls-files agent/` when you have removed it here but not committed
+that, or present at the base commit (`git cat-file -e <base>:agent/<path>`) when the removal is
+already committed; `git ls-files` reads the index, so a committed deletion is no longer listed.
+Anything the base commit does not declare belongs to the sibling harness or to the machine, and
+`status` listing it is expected, not something to delete.
+
+## Pins
+
+Every third party the config loads is pinned to an exact version or commit, so a fresh machine
+installs what was verified here rather than whatever is current today:
+
+| Loaded by | Pin |
+|---|---|
+| `agent/settings.json` | `npm:pi-subagents@0.84.0`, `npm:pi-web-access@0.46.0` |
+| `agent/mcp.json` (playwright) | `@playwright/mcp@0.0.86` |
+| `agent/mcp.json` (serena) | `git+https://github.com/oraios/serena@be609b625740846dc2750cc13291966cf1216b00` |
+
+`scripts/verify-config.sh` fails the mirror on a floating version, so `@latest` and unpinned
+`npm:` entries cannot come back by accident. A pin fixes what this repo declares, not what those
+resolve to on the day you install: the two hosted MCP endpoints (`context7` and `deepwiki`) carry no
+version to pin at all, and every transitive dependency of a pinned package still floats.
+
+To raise a pin: change the one line, `scripts/sync.sh push`, restart Pi so it reinstalls, run
+`scripts/verify-config.sh` and `/full-workflow` on a real slice, then commit the bump on its own with
+the version in the subject. Never bump several pins in one commit; a slice that breaks afterwards has
+to be attributable to one of them. Pi leaves an exact version alone, so an old pin never moves on its
+own — `pi update --extensions` reconciles installs, it does not raise the declared versions.
 
 ## Setting up a new machine
 
 1. Install Pi, then `git clone` this repo and run `scripts/sync.sh push`.
 2. Add credentials separately — `pi login`, or edit `~/.pi/agent/auth.json` by hand. This repo stores no keys.
-3. Restart Pi (or `/reload`). Pi installs the packages `agent/settings.json` declares, which is how the
-   `subagent` tool from `pi-subagents` arrives; the `aidd-*` subagents cannot launch without it.
+3. Restart Pi (or `/reload`). Pi installs the exact package versions `agent/settings.json` declares,
+   which is how the `subagent` tool from `pi-subagents` arrives; the `aidd-*` subagents cannot launch
+   without it.
 4. Provide the environment the config expects:
    - `CONTEXT7_API_KEY` — referenced by `agent/mcp.json` as `${CONTEXT7_API_KEY}`; never write it to a file.
    - `uvx` (serena) and `npx` (playwright) on `PATH` for those MCP servers.
@@ -83,7 +122,9 @@ entry points, and each one loads that skill instead of restating it:
 The Orchestrator — the primary Pi agent — is the only agent that runs the procedure, stages, and
 commits. Every delegated task is a self-contained packet, because children start in fresh context.
 Each slice is one commit with `Slice:`, `Verified:`, and `Review:` trailers, made only after the
-checks pass and the independent reviewer approves the staged tree hash. FAILED (ran the check, it did
+checks pass and the independent reviewer approves the staged tree hash. Around every implementer run
+the Orchestrator compares `HEAD`, the branch, and `git write-tree`, so a subagent that staged something
+is detected rather than trusted. FAILED (ran the check, it did
 not pass) and BLOCKED (could not run it) are never DONE, and neither is ever committed.
 
 ## Subagents (`agent/agents/`)
@@ -131,7 +172,9 @@ able to find it from any project.
 [`pi-harness`](https://github.com/Kyohei-Prj/pi-harness) mirrors the same agent directory with a
 different working method: `slice-workflow`, plan mode, `/explore`, and the `explorer`/`reviewer`
 subagents. The two share `settings.json` and `mcp.json`, so push them in either order — the last push
-wins for those two files, and each keeps a backup of what it replaced.
+wins for those two files, and each keeps a backup of what it replaced. Because the live directory
+holds resources from both, `scripts/sync.sh status` from either repo lists the other's resources as
+drift; that line is expected, not something to delete.
 
 ## License
 

@@ -1,6 +1,7 @@
 {
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
   "packages": [
-    "npm:pi-subagents",
-    "npm:pi-web-access"
+    "npm:pi-subagents@0.84.0",
+    "npm:pi-web-access@0.46.0"
   ]
 }
