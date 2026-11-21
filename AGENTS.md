@@ -2,7 +2,7 @@
 
 ## Code rules
 - **Minimalism.** Write the least that produces the expected behavior. No speculative commands, skills, subagents, options, or dependencies. Prefer deleting to adding.
-- **Function length.** Every function in `scripts/` has at most 5 lines of code, excluding comments and blank lines. Extract a well-named function when it grows past that.
+- **Function length.** Aim to keep every function to at most 5 lines of code, excluding comments and blank lines. Extract a well-named function when it grows past that.
 - **Self-documenting names.** Express intent through explicit names for files, skills, subagents, commands, and functions. Rename instead of commenting. Comment only a non-obvious *why*, never a *what*.
 
 ## Workflow

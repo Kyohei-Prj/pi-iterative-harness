@@ -18,7 +18,8 @@ description: Plan small, runnable, user-observable vertical slices with explicit
 
 ## Size cap
 
-A slice must be reviewable as one pasted diff. Targets: one primary behavior, roughly 10 files or fewer, and roughly 400 changed lines or fewer, excluding lockfiles and generated files. If the work exceeds this, split it and plan only the first part. Exceeding the cap needs an explicit justification and user approval.
+A slice must be reviewable as one pasted diff, targetting one primary behavior.
+If the work exceeds this, split it and plan only the first part.
 
 Aim at the smallest safe root-cause fix, not the smallest diff. Never add a workaround, a duplicate code path, or a special case merely to stay under the cap: when the root cause is larger than the target, say so in the plan and ask for the larger scope.
 
